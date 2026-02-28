@@ -3,6 +3,9 @@
 local Agents = require("99.extensions.agents")
 local Point = require("99.geo").Point
 
+local BASE = 100
+local LEGEND = 200
+
 --- @class _99.window.Module
 --- @field active_windows _99.window.Window[]
 local M = {
@@ -355,11 +358,56 @@ local function highlight_rules_found(win, rules, group)
   })
 end
 
+--- @alias _99.window.KeyMap table<string, string>
 --- @class _99.window.CaptureInputOpts
 --- @field cb fun(success: boolean, result: string): nil
 --- @field on_load? fun(): nil
 --- @field content? string[]
 --- @field rules? _99.Agents.Rules
+--- @field keymap? _99.window.KeyMap
+
+--- @param keymap _99.window.KeyMap
+--- @param width number
+--- @return string[]
+local function keymap_lines(keymap, width)
+  local keys = vim.tbl_keys(keymap)
+  table.sort(keys)
+
+  local lines = { "" }
+  for _, key in ipairs(keys) do
+    local current = lines[#lines]
+    local legend = string.format("%s=%s", key, keymap[key])
+    if #current + #legend + 1 > width then
+      table.insert(lines, legend)
+    else
+      lines[#lines] = string.format("%s %s", current, legend)
+    end
+  end
+
+  return lines
+end
+
+--- @param win _99.window.Window
+--- @param keymap _99.window.KeyMap
+local function create_window_legend(win, keymap)
+  local lines = keymap_lines(keymap, win.config.width - 2)
+  local keyoffset = #lines
+  local keymap_config = create_window_inside(win, keyoffset - 1)
+  keymap_config.height = keyoffset
+  keymap_config.zindex = LEGEND
+
+  local keymap_win = create_floating_window(keymap_config, "", false)
+  vim.bo[keymap_win.buf_id].buftype = "nofile"
+  vim.bo[keymap_win.buf_id].bufhidden = "wipe"
+  vim.bo[keymap_win.buf_id].swapfile = false
+  vim.bo[keymap_win.buf_id].modifiable = true
+  vim.bo[keymap_win.buf_id].readonly = false
+  vim.api.nvim_buf_set_lines(keymap_win.buf_id, 0, -1, false, lines)
+  vim.bo[keymap_win.buf_id].modifiable = false
+  vim.bo[keymap_win.buf_id].readonly = true
+
+  vim.wo[win.win_id].scrolloff = keyoffset
+end
 
 --- @param name string
 --- @param opts _99.window.CaptureInputOpts
@@ -373,6 +421,10 @@ function M.capture_input(name, opts)
 
   set_defaul_win_options(win, "99-prompt")
   vim.api.nvim_set_current_win(win.win_id)
+
+  opts.keymap = opts.keymap or {}
+  opts.keymap.q = "cancel"
+  create_window_legend(win, opts.keymap)
 
   local group = vim.api.nvim_create_augroup(
     "99_present_prompt_" .. win.buf_id,
@@ -458,6 +510,7 @@ function M.capture_select_input(name, opts)
   win = M.capture_input(name, {
     content = opts.content,
     rules = opts.rules,
+    keymap = opts.keymap,
     cb = function(success, result)
       if not success then
         opts.cb(false, result)

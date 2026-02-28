@@ -65,7 +65,6 @@ Notes:
  * delete removes the request from history
 * search qfix notes should be added as marks
  * there will be a need for smarter mark management.
-* stop all requests do not seem to stop active requests...
 * add an add_data method to context in which when you set the data it:
  * asserts if you included a type
  * initialized with the proper type

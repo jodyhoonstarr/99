@@ -6,6 +6,7 @@ local Tracking = require("99.state.tracking")
 local Level = require("99.logger.level")
 local ops = require("99.ops")
 local Window = require("99.window")
+local select_window = require("99.window.select-window")
 local StatusWindow = require("99.window.status-window")
 local Prompt = require("99.prompt")
 local State = require("99.state")
@@ -216,39 +217,6 @@ local _99 = {
   FATAL = Level.FATAL,
 }
 
---- @param requests _99.Prompt[]
----@param cb fun(r: _99.Prompt): nil
-local function capture_request(requests, cb)
-  local str_requests = Tracking.to_selectable_list(requests)
-
-  Window.capture_select_input("99 Select Request", {
-    content = str_requests,
-    cb = function(success, result)
-      if not success or result == "" then
-        return
-      end
-
-      local idx = tonumber(vim.fn.matchstr(result, "^\\d\\+"))
-      if idx == nil then
-        return
-      end
-      local r = requests[idx]
-      if not r then
-        print(
-          "request not found... potentially report bug: " .. vim.inspect(idx)
-        )
-        return
-      end
-      assert(
-        r:valid(),
-        "request is not valid... not sure how we got here.  please report bug and this word: "
-          .. vim.inspect(r.operation)
-      )
-      cb(r)
-    end,
-  })
-end
-
 --- @param cb fun(context: _99.Prompt, o: _99.ops.Opts?): nil
 --- @param name string
 --- @param context _99.Prompt
@@ -318,7 +286,10 @@ end
 
 function _99.open()
   local requests = _99_state.tracking:successful()
-  capture_request(requests, function(r)
+  local str_requests = Tracking.to_selectable_list(requests)
+  select_window(str_requests, function(idx)
+    local r = requests[idx]
+    assert(r:valid(), "encountered unexpected issue.  malformated data")
     if r.operation == "visual" then
       --- TODO: this is its own work item for being able to have a global mark
       --- section in which i keep track of marks for the lifetime of the
