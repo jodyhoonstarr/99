@@ -30,6 +30,7 @@ end
 --- @field ai_stdout_rows number
 --- @field display_errors boolean
 --- @field provider_override _99.Providers.BaseProvider?
+--- @field provider_extra_args string[]
 --- @field rules _99.Agents.Rules
 --- @field tracking _99.State.Tracking
 --- @field __tmp_dir string | nil
@@ -73,6 +74,7 @@ function State.new(opts)
   local _99_state = setmetatable(props, State) --[[@as _99.State]]
 
   _99_state.provider_override = opts.provider
+  _99_state.provider_extra_args = opts.provider_extra_args or {}
   _99_state.completion = opts.completion or default_completion()
   _99_state.completion.custom_rules = _99_state.completion.custom_rules or {}
   _99_state.completion.files = _99_state.completion.files or {}
