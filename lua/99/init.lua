@@ -424,6 +424,10 @@ function _99.setup(opts)
     callback = function()
       _99.stop_all_requests()
       _99_state:sync()
+      local tmp = _99_state:tmp_dir()
+      if tmp and vim.uv.fs_stat(tmp) then
+        vim.fn.delete(tmp, "rf")
+      end
     end,
   })
 
