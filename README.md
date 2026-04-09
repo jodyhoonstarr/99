@@ -33,7 +33,7 @@ through `search` and `work`
 ### Basic Setup
 ```lua
 	{
-		"ThePrimeagen/99",
+		"jodyhoonstarr/99",
 		config = function()
 			local _99 = require("99")
 
@@ -436,6 +436,7 @@ Referenced content is automatically resolved and injected into the AI context. N
 | `ClaudeCodeProvider` | `claude` | `claude-sonnet-4-5` |
 | `CursorAgentProvider` | `cursor-agent` | `sonnet-4.5` |
 | `GeminiCLIProvider` | `gemini` | `auto` |
+| `PiProvider` | `pi` | `google/gemini-2.5-pro` |
 
 ```lua
 _99.setup({
