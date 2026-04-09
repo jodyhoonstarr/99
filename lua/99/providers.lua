@@ -329,6 +329,56 @@ function GeminiCLIProvider._get_default_model()
   return "auto"
 end
 
+--- @class PiProvider : _99.Providers.BaseProvider
+local PiProvider = setmetatable({}, { __index = BaseProvider })
+
+--- @param query string
+--- @param context _99.Prompt
+--- @return string[]
+function PiProvider._build_command(_, query, context)
+  return {
+    "pi",
+    "-p",
+    "--no-session",
+    "--model",
+    context.model,
+    query,
+  }
+end
+
+--- @return string
+function PiProvider._get_provider_name()
+  return "PiProvider"
+end
+
+--- @return string
+function PiProvider._get_default_model()
+  return "github-copilot/claude-sonnet-4.5"
+end
+
+function PiProvider.fetch_models(callback)
+  vim.system({ "pi", "--list-models" }, { text = true }, function(obj)
+    vim.schedule(function()
+      if obj.code ~= 0 then
+        callback(nil, "Failed to fetch models from pi")
+        return
+      end
+      local models = {}
+      for i, line in ipairs(vim.split(obj.stdout, "\n", { trimempty = true })) do
+        if i == 1 then
+          -- skip the header row (provider  model  context  max-out  ...)
+        else
+          local provider, model = line:match("^(%S+)%s+(%S+)")
+          if provider and model then
+            table.insert(models, provider .. "/" .. model)
+          end
+        end
+      end
+      callback(models, nil)
+    end)
+  end)
+end
+
 return {
   BaseProvider = BaseProvider,
   OpenCodeProvider = OpenCodeProvider,
@@ -336,4 +386,5 @@ return {
   CursorAgentProvider = CursorAgentProvider,
   KiroProvider = KiroProvider,
   GeminiCLIProvider = GeminiCLIProvider,
+  PiProvider = PiProvider,
 }
