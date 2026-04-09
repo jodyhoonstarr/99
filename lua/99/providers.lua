@@ -353,7 +353,7 @@ end
 
 --- @return string
 function PiProvider._get_default_model()
-  return "anthropic/claude-sonnet-4-5"
+  return "google/gemini-2.5-pro"
 end
 
 function PiProvider.fetch_models(callback)
