@@ -1,3 +1,5 @@
+> **Note:** This is a custom fork of [ThePrimeagen/99](https://github.com/ThePrimeagen/99) with added support for [pi.dev](https://pi.dev) as a provider via `PiProvider`.
+
 # 99
 The AI client that Neovim deserves, built by those that still enjoy to code.
 
