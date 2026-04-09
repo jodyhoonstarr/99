@@ -353,7 +353,7 @@ end
 
 --- @return string
 function PiProvider._get_default_model()
-  return "github-copilot/claude-sonnet-4.5"
+  return "anthropic/claude-sonnet-4-5"
 end
 
 function PiProvider.fetch_models(callback)
