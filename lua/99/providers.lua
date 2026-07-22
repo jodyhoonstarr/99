@@ -332,18 +332,118 @@ end
 --- @class PiProvider : _99.Providers.BaseProvider
 local PiProvider = setmetatable({}, { __index = BaseProvider })
 
+-- This provider returns a completion directly instead of asking an agent to
+-- write it to context.tmp_file.
+PiProvider.uses_tmp_file = false
+
+local function pi_direct_bridge_path()
+  local source = debug.getinfo(1, "S").source
+  local file = source:sub(1, 1) == "@" and source:sub(2) or source
+  local root = vim.fs.dirname(vim.fs.dirname(vim.fs.dirname(file)))
+  return vim.fs.joinpath(root, "scripts", "pi-direct.mjs")
+end
+
+local function pi_package_path()
+  local configured = vim.env.PI_CODING_AGENT_PACKAGE
+  if configured and configured ~= "" then
+    return configured
+  end
+
+  -- pnpm's POSIX shim records the package entrypoint it launches. Derive the
+  -- package root from it so the bridge uses the same Pi installation and auth.
+  local pi_binary = vim.fn.exepath("pi")
+  if pi_binary == "" then
+    return nil, "pi executable was not found"
+  end
+
+  local ok, lines = pcall(vim.fn.readfile, pi_binary)
+  if not ok then
+    return nil, "unable to read the pi executable shim"
+  end
+
+  for _, line in ipairs(lines) do
+    local target = line:match("^# cmd%-shim%-target=(.+)$")
+    if target then
+      return vim.fs.dirname(vim.fs.dirname(target))
+    end
+  end
+
+  return nil, "unable to locate Pi's package; set PI_CODING_AGENT_PACKAGE"
+end
+
 --- @param query string
 --- @param context _99.Prompt
---- @return string[]
-function PiProvider._build_command(_, query, context)
-  return {
-    "pi",
-    "-p",
-    "--no-session",
-    "--model",
-    context.model,
-    query,
-  }
+--- @param observer _99.Providers.Observer
+function PiProvider:make_request(query, context, observer)
+  observer.on_start()
+
+  local logger = context.logger:set_area(self:_get_provider_name())
+  local package_path, package_err = pi_package_path()
+  if not package_path then
+    observer.on_complete("failed", package_err)
+    return
+  end
+
+  local bridge = pi_direct_bridge_path()
+  if not vim.uv.fs_stat(bridge) then
+    observer.on_complete("failed", "Pi direct bridge was not found: " .. bridge)
+    return
+  end
+
+  local stdout = {}
+  local stderr = {}
+  local once_complete = once(function(status, text)
+    observer.on_complete(status, text)
+  end)
+  local command = { vim.fn.exepath("node") ~= "" and vim.fn.exepath("node") or "node", bridge, context.model }
+  logger:debug("make_request", "command", command)
+
+  local proc = vim.system(
+    command,
+    {
+      text = true,
+      stdin = query,
+      env = vim.tbl_extend("force", vim.fn.environ(), {
+        PI_CODING_AGENT_PACKAGE = package_path,
+      }),
+      stdout = vim.schedule_wrap(function(err, data)
+        if err and err ~= "" then
+          logger:debug("stdout#error", "err", err)
+        end
+        if data then
+          table.insert(stdout, data)
+        end
+      end),
+      stderr = vim.schedule_wrap(function(err, data)
+        if err and err ~= "" then
+          logger:debug("stderr#error", "err", err)
+        end
+        if data then
+          table.insert(stderr, data)
+        end
+      end),
+    },
+    vim.schedule_wrap(function(obj)
+      if context:is_cancelled() then
+        once_complete("cancelled", "")
+        return
+      end
+
+      if obj.code ~= 0 then
+        local err = table.concat(stderr)
+        if err == "" then
+          err = string.format("process exit code: %d", obj.code)
+        end
+        logger:error("Pi direct request failed", "error", err)
+        once_complete("failed", err)
+        return
+      end
+
+      once_complete("success", table.concat(stdout))
+    end)
+  )
+
+  context:_set_process(proc)
 end
 
 --- @return string

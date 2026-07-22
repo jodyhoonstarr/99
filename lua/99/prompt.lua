@@ -497,17 +497,20 @@ function Prompt:finalize()
       self._99.prompts.get_range_text(visual_data.range)
     )
   end
-  table.insert(
-    self.agent_context,
-    self._99.prompts.tmp_file_location(self.tmp_file)
-  )
+  local provider = self._99.provider_override or BaseProvider.OpenCodeProvider
+  if provider.uses_tmp_file ~= false then
+    table.insert(
+      self.agent_context,
+      self._99.prompts.tmp_file_location(self.tmp_file)
+    )
 
-  if
-    self.operation == "visual"
-    or self.operation == "tutorial"
-    or self.operation == "search"
-  then
-    table.insert(self.agent_context, self._99.prompts.only_tmp_file_change())
+    if
+      self.operation == "visual"
+      or self.operation == "tutorial"
+      or self.operation == "search"
+    then
+      table.insert(self.agent_context, self._99.prompts.only_tmp_file_change())
+    end
   end
 
   return true, self
