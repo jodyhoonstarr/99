@@ -374,7 +374,7 @@ local function pi_package_path()
   for _, line in ipairs(lines) do
     local target = line:match("^# cmd%-shim%-target=(.+)$")
     if target then
-      return vim.fs.dirname(vim.fs.dirname(target))
+      return vim.fs.dirname(vim.fs.dirname(vim.fs.dirname(target)))
     end
   end
 

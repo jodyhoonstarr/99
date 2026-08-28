@@ -45,9 +45,8 @@ const response = await runtime.completeSimple(
     messages: [{ role: "user", content: prompt, timestamp: Date.now() }],
   },
   {
-    // 99 already supplies the exact edit context. Extra reasoning only adds
-    // latency to a single-response replacement request.
-    reasoning: "off",
+    // Use maximum reasoning for higher-quality replacement requests.
+    reasoning: "max",
   }
 );
 
