@@ -45,8 +45,8 @@ const response = await runtime.completeSimple(
     messages: [{ role: "user", content: prompt, timestamp: Date.now() }],
   },
   {
-    // Use maximum reasoning for higher-quality replacement requests.
-    reasoning: "max",
+    // Use medium reasoning for a better latency/quality balance.
+    reasoning: "medium",
   }
 );
 
